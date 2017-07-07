@@ -1,6 +1,8 @@
 package com.mongo.spark
 
 import java.io.{BufferedInputStream, File, FileInputStream, InputStream}
+import java.text.SimpleDateFormat
+import java.util.{Calendar, Date}
 
 import org.apache.hadoop.conf._
 import org.apache.hadoop.fs._
@@ -67,5 +69,22 @@ object HDFSFileService {
       .getOrCreate()
     val df = spark.sqlContext.read.json("hdfs://wifianalytics/user/zmy/td_2017-07-06.txt");
     df.show();
+  }
+  def getOneDayStart_time():Long={
+    val now = new Date()
+    val dateFormat = new SimpleDateFormat("yyyy-MM-dd")
+    val a = dateFormat.parse(dateFormat.format(now)).getTime
+    var str = a+""
+    str.toLong
+  }
+  def getOneDayEnd_time():Long={
+    var cal = Calendar.getInstance();
+    cal.set(Calendar.HOUR_OF_DAY, 23);
+    cal.set(Calendar.MINUTE, 59);
+    cal.set(Calendar.SECOND, 59);
+    cal.set(Calendar.MILLISECOND, 999);
+    val a = cal.getTime.getTime
+    var str = a+""
+    str.toLong
   }
 }
