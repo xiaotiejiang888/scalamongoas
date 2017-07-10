@@ -7,6 +7,7 @@ import java.util.{Calendar, Date}
 import org.apache.hadoop.conf._
 import org.apache.hadoop.fs._
 import org.apache.spark.sql.SparkSession
+import org.bson.types.ObjectId
 
 object HDFSFileService {
   private val conf = new Configuration()
@@ -86,5 +87,12 @@ object HDFSFileService {
     val a = cal.getTime.getTime
     var str = a+""
     str.toLong
+  }
+  def getBsonIdStr(any: Any): String = {
+    if(any.isInstanceOf[ObjectId]){
+      val objId = any.asInstanceOf[ObjectId]
+      objId.toHexString
+    }
+    any+""
   }
 }

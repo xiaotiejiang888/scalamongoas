@@ -1,5 +1,5 @@
 organization := "com.aerospike"
-name         := "aerospike-spark"
+name         := "scalamongoas"
 version      := "1.3.1"
 
 crossScalaVersions := Seq("2.10.6", "2.11.8", "2.12.0")
