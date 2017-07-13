@@ -19,30 +19,38 @@ object HDFSFileService {
   private val fileSystem = FileSystem.get(conf)
 
   def saveFile(filepath: String): Unit = {
-    val file = new File(filepath)
-    val out = fileSystem.create(new Path(file.getName))
-    val in = new BufferedInputStream(new FileInputStream(file))
-    var b = new Array[Byte](1024)
-    var numBytes = in.read(b)
-    while (numBytes > 0) {
-      out.write(b, 0, numBytes)
-      numBytes = in.read(b)
+    try{
+      val file = new File(filepath)
+      val out = fileSystem.create(new Path(file.getName))
+      val in = new BufferedInputStream(new FileInputStream(file))
+      var b = new Array[Byte](1024)
+      var numBytes = in.read(b)
+      while (numBytes > 0) {
+        out.write(b, 0, numBytes)
+        numBytes = in.read(b)
+      }
+      in.close()
+      out.close()
+    }catch {
+      case e: Exception => println("exception caught: " + e);
     }
-    in.close()
-    out.close()
   }
 
   def saveFileFromInputStream(inputStream: InputStream, fileName:String): Unit = {
-    val out = fileSystem.create(new Path(fileName))
-    val in = new BufferedInputStream(inputStream)
-    var b = new Array[Byte](1024)
-    var numBytes = in.read(b)
-    while (numBytes > 0) {
-      out.write(b, 0, numBytes)
-      numBytes = in.read(b)
+    try{
+      val out = fileSystem.create(new Path(fileName))
+      val in = new BufferedInputStream(inputStream)
+      var b = new Array[Byte](1024)
+      var numBytes = in.read(b)
+      while (numBytes > 0) {
+        out.write(b, 0, numBytes)
+        numBytes = in.read(b)
+      }
+      in.close()
+      out.close()
+    }catch {
+      case e: Exception => println("exception caught: " + e);
     }
-    in.close()
-    out.close()
   }
 
   def removeFile(filename: String): Boolean = {
