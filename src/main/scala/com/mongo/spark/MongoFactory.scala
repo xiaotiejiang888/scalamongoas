@@ -7,7 +7,7 @@ object MongoFactory {
   private val DATABASE   = "mpush"
 
   @throws(classOf[Exception])
-  def getConnection: MongoConnection = return MongoConnection(MongoURI("mongodb://mpush:talkingdata@172.23.6.82/mpush"))
+  def getConnection: MongoConnection = return MongoConnection(MongoURI("mongodb://mpush:talkingdata@172.23.5.158/mpush"))
   @throws(classOf[Exception])
   def closeConnection(conn: MongoConnection) { conn.close }
 
