@@ -65,7 +65,7 @@ object HDFSFileService {
     val appGame = dfApp.join(dfTdGameWithOutId,dfApp("_id")===dfTdGameWithOutId("app"))
     dfApp.createOrReplaceTempView("dfApp")
     dfTd.createOrReplaceTempView("dfTd")
-    val appMpush = sqlContext.sql("select * from dfApp  where _id not in (select app from dfTd)")
+    val appMpush = sqlContext.sql("select * from dfApp  where not exists (select * from dfTd WHERE dfApp._id=dfTd.app)")
 
     val pushCount_App = appApp.join(dfPushOneDay,appApp("_id")===dfPushOneDay("app")).count()//app每日贡献push数 4838
     val pushCount_Game = appGame.join(dfPushOneDay,appGame("_id")===dfPushOneDay("app")).count()//game每日贡献push数  1
