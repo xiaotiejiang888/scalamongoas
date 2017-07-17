@@ -28,6 +28,27 @@ object HDFSFileService {
     str.toLong
   }
 
+  def getDt = {
+    val now: Date = new Date()
+    val dateFormat: SimpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
+    val dt = dateFormat.format(now)
+    dt
+  }
+  def getSparkSession(args: Array[String]): SparkSession = {
+    val uri: String = args.headOption.getOrElse("mongodb://zmy3:zmy3@172.23.5.158/mpush.app?readPreference=primary")
+    val conf = new SparkConf()
+      .setMaster("spark://172.23.5.113:7077")
+      .setAppName("MongoSparkConnectorTour")
+      .set("spark.app.id", "MongoSparkConnectorTour")
+      .set("spark.mongodb.input.uri", uri)
+      .set("spark.mongodb.output.uri", uri)
+      .set("aerospike.seedhost", "172.23.5.158")
+      .set("aerospike.port",  "3000")
+      .set("aerospike.namespace", "push")
+    val spark = SparkSession.builder().config(conf).master("spark://172.23.5.113:7077").appName("scalamongoas").getOrCreate()
+    spark
+  }
+
   def main(args: Array[String]): Unit = {
     val session = getSparkSession(args)
     val sqlContext = session.sqlContext
@@ -51,25 +72,5 @@ object HDFSFileService {
     val writer = new PrintWriter(new File(fileName))
     writer.write("app每日贡献push数:"+count)
     writer.close()
-  }
-  def getDt = {
-    val now: Date = new Date()
-    val dateFormat: SimpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
-    val dt = dateFormat.format(now)
-    dt
-  }
-  def getSparkSession(args: Array[String]): SparkSession = {
-    val uri: String = args.headOption.getOrElse("mongodb://zmy3:zmy3@172.23.5.158/mpush.app?readPreference=primary")
-    val conf = new SparkConf()
-      .setMaster("spark://172.23.5.113:7077")
-      .setAppName("MongoSparkConnectorTour")
-      .set("spark.app.id", "MongoSparkConnectorTour")
-      .set("spark.mongodb.input.uri", uri)
-      .set("spark.mongodb.output.uri", uri)
-      .set("aerospike.seedhost", "172.23.5.158")
-      .set("aerospike.port",  "3000")
-      .set("aerospike.namespace", "push")
-    val spark = SparkSession.builder().config(conf).master("spark://172.23.5.113:7077").appName("scalamongoas").getOrCreate()
-    spark
   }
 }
