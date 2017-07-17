@@ -110,9 +110,9 @@ object HDFSFileService {
     writer.write("game每日贡献的活跃设备数:"+activeDv_Game+"\n")
     writer.write("mpush每日贡献的活跃设备数:"+activeDv_Mpush+"\n")
 
-    writer.write("app每日新增数:"+appAddCount+"累计数:"+appTotalCount+"\n")
-    writer.write("game每日新增数:"+gameAddCount+"累计数:"+gameTotalCount+"\n")
-    writer.write("mpush每日新增数:"+mpushAddCount+"累计数:"+mpushTotalCount+"\n")
+    writer.write("app每日新增数:"+appAddCount+",累计数:"+appTotalCount+"\n")
+    writer.write("game每日新增数:"+gameAddCount+",累计数:"+gameTotalCount+"\n")
+    writer.write("mpush每日新增数:"+mpushAddCount+",累计数:"+mpushTotalCount+"\n")
     writer.close()
   }
 }
