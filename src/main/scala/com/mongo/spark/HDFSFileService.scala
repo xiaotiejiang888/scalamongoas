@@ -49,6 +49,7 @@ object HDFSFileService {
     spark
   }
 
+  //./spark-submit --class com.mongo.spark.HDFSFileService --master spark://172.23.5.113:7077 scalamongoas-assembly-1.3.1.jar
   def main(args: Array[String]): Unit = {
     val session = getSparkSession(args)
     val sqlContext = session.sqlContext
@@ -69,29 +70,49 @@ object HDFSFileService {
 
     val pushCount_App = appApp.join(dfPushOneDay,appApp("_id")===dfPushOneDay("app")).count()//app每日贡献push数 4838
     val pushCount_Game = appGame.join(dfPushOneDay,appGame("_id")===dfPushOneDay("app")).count()//game每日贡献push数  1
+    val pushCount_Mpush = appMpush.join(dfPushOneDay,appMpush("_id")===dfPushOneDay("app")).count()
 
     val activityCount_App = appApp.join(dfActivityOneDay, appApp("_id") === dfActivityOneDay("app")).count()//app每日贡献activity数 1
     val activityCount_Game = appGame.join(dfActivityOneDay,appGame("_id")===dfActivityOneDay("app")).count() //game每日贡献activity数 1
+    val activityCount_Mpush = appMpush.join(dfActivityOneDay,appMpush("_id")===dfActivityOneDay("app")).count()
 
     val dvCount_App = appApp.join(dfDvOneDayWithCt,appApp("_id.oid")===dfDvOneDayWithCt("app")).count()// 每日贡献的新增设备数   3800
     val dvCount_Game =appGame.join(dfDvOneDayWithCt,appGame("_id.oid")===dfDvOneDayWithCt("app")).count()// 每日贡献的新增设备数  1200
+    val dvCount_Mpush =appMpush.join(dfDvOneDayWithCt,appMpush("_id.oid")===dfDvOneDayWithCt("app")).count()
 
     val activeDv_App = appApp.join(dfDvOneDayWithMt,appApp("_id.oid")===dfDvOneDayWithMt("app")).count()// 每日贡献的活跃设备数  3800
     val activeDv_Game =appGame.join(dfDvOneDayWithMt,appGame("_id.oid")===dfDvOneDayWithMt("app")).count()// 每日贡献的活跃设备数  1200
+    val activeDv_Mpush =appMpush.join(dfDvOneDayWithMt,appMpush("_id.oid")===dfDvOneDayWithMt("app")).count()
+
+    val appAddCount = appApp.where("ct>1499616000000 and ct<1499702400000").count()  //app每日新增数  96
+    val gameAddCount = appGame.where("ct>1499616000000 and ct<1499702400000").count() //game每日新增数     37
+    val mpushAddCount = appMpush.where("ct>1499616000000 and ct<1499702400000").count()  // 0
+
+    val appTotalCount = appApp.count()  //app累计数
+    val gameTotalCount = appGame.count() //game累计数
+    val mpushTotalCount = appMpush.count()  //mpush累计数
 
     val fileName = "statistics_result_" + getDt + ".txt"
     val writer = new PrintWriter(new File(fileName))
     writer.write("app每日贡献push数:"+pushCount_App+"\n")
     writer.write("game每日贡献push数:"+pushCount_Game+"\n")
+    writer.write("mpush每日贡献push数:"+pushCount_Mpush+"\n")
 
     writer.write("app每日贡献activity数:"+activityCount_App+"\n")
     writer.write("game每日贡献activity数:"+activityCount_Game+"\n")
+    writer.write("mpush每日贡献activity数:"+activityCount_Mpush+"\n")
 
     writer.write("app每日贡献的新增设备数:"+dvCount_App+"\n")
     writer.write("game每日贡献的新增设备数:"+dvCount_Game+"\n")
+    writer.write("mpush每日贡献的新增设备数:"+dvCount_Mpush+"\n")
 
     writer.write("app每日贡献的活跃设备数:"+activeDv_App+"\n")
     writer.write("game每日贡献的活跃设备数:"+activeDv_Game+"\n")
+    writer.write("mpush每日贡献的活跃设备数:"+activeDv_Mpush+"\n")
+
+    writer.write("app每日新增数:"+appAddCount+"累计数:"+appTotalCount+"\n")
+    writer.write("game每日新增数:"+gameAddCount+"累计数:"+gameTotalCount+"\n")
+    writer.write("mpush每日新增数:"+mpushAddCount+"累计数:"+mpushTotalCount+"\n")
     writer.close()
   }
 }
