@@ -54,10 +54,8 @@ object HDFSFileService {
     val sqlContext = session.sqlContext
     val dfApp = sqlContext.loadFromMongoDB(ReadConfig(Map("uri" -> "mongodb://zmy3:zmy3@172.23.5.158/mpush.app?readPreference=primary", "partitioner" -> "MongoSplitVectorPartitioner")))
     val dfTd = sqlContext.loadFromMongoDB(ReadConfig(Map("uri" -> "mongodb://zmy3:zmy3@172.23.5.158/mpush.td?readPreference=primary", "partitioner" -> "MongoSplitVectorPartitioner")))
-    val dfTdApp = sqlContext.loadFromMongoDB(ReadConfig(Map("uri" -> "mongodb://zmy3:zmy3@172.23.5.158/mpush.td?readPreference=primary", "partitioner" -> "MongoSplitVectorPartitioner"))).where("source='app'")
-    val dfTdAppWithOutId = dfTdApp.drop("_id")
-    val dfTdGame = sqlContext.loadFromMongoDB(ReadConfig(Map("uri" -> "mongodb://zmy3:zmy3@172.23.5.158/mpush.td?readPreference=primary", "partitioner" -> "MongoSplitVectorPartitioner"))).where("source='game'")
-    val dfTdGameWithOutId = dfTdGame.drop("_id")
+    val dfTdAppWithOutId = sqlContext.loadFromMongoDB(ReadConfig(Map("uri" -> "mongodb://zmy3:zmy3@172.23.5.158/mpush.td?readPreference=primary", "partitioner" -> "MongoSplitVectorPartitioner"))).where("source='app'").drop("_id")
+    val dfTdGameWithOutId = sqlContext.loadFromMongoDB(ReadConfig(Map("uri" -> "mongodb://zmy3:zmy3@172.23.5.158/mpush.td?readPreference=primary", "partitioner" -> "MongoSplitVectorPartitioner"))).where("source='game'").drop("_id")
     val dfPush = sqlContext.loadFromMongoDB(ReadConfig(Map("uri" -> "mongodb://zmy3:zmy3@172.23.5.158/mpush.push?readPreference=primary", "partitioner" -> "MongoSplitVectorPartitioner")))
     val dfActivity = sqlContext.loadFromMongoDB(ReadConfig(Map("uri" -> "mongodb://zmy3:zmy3@172.23.5.158/mpush.activity?readPreference=primary", "partitioner" -> "MongoSplitVectorPartitioner")))
     val sprkAsconf = new SparkConf().setMaster("spark://172.23.5.113:7077").setAppName("Aerospike Tests for Spark Dataset").set("aerospike.seedhost", "172.23.5.158").set("aerospike.port",  "3000").set("aerospike.namespace", "push")
