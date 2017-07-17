@@ -56,19 +56,42 @@ object HDFSFileService {
     val dfTd = sqlContext.loadFromMongoDB(ReadConfig(Map("uri" -> "mongodb://zmy3:zmy3@172.23.5.158/mpush.td?readPreference=primary", "partitioner" -> "MongoSplitVectorPartitioner")))
     val dfTdAppWithOutId = sqlContext.loadFromMongoDB(ReadConfig(Map("uri" -> "mongodb://zmy3:zmy3@172.23.5.158/mpush.td?readPreference=primary", "partitioner" -> "MongoSplitVectorPartitioner"))).where("source='app'").drop("_id")
     val dfTdGameWithOutId = sqlContext.loadFromMongoDB(ReadConfig(Map("uri" -> "mongodb://zmy3:zmy3@172.23.5.158/mpush.td?readPreference=primary", "partitioner" -> "MongoSplitVectorPartitioner"))).where("source='game'").drop("_id")
-    val dfPush = sqlContext.loadFromMongoDB(ReadConfig(Map("uri" -> "mongodb://zmy3:zmy3@172.23.5.158/mpush.push?readPreference=primary", "partitioner" -> "MongoSplitVectorPartitioner")))
-    val dfActivity = sqlContext.loadFromMongoDB(ReadConfig(Map("uri" -> "mongodb://zmy3:zmy3@172.23.5.158/mpush.activity?readPreference=primary", "partitioner" -> "MongoSplitVectorPartitioner")))
-    val sprkAsconf = new SparkConf().setMaster("spark://172.23.5.113:7077").setAppName("Aerospike Tests for Spark Dataset").set("aerospike.seedhost", "172.23.5.158").set("aerospike.port",  "3000").set("aerospike.namespace", "push")
-    val dfDv = session.read.format("com.aerospike.spark.sql").option("aerospike.set", "dv").load
+    val dfPushOneDay = sqlContext.loadFromMongoDB(ReadConfig(Map("uri" -> "mongodb://zmy3:zmy3@172.23.5.158/mpush.push?readPreference=primary", "partitioner" -> "MongoSplitVectorPartitioner"))).where("ct>1499616000000 and ct<1499702400000")//查询某一天的push总量
+    val dfActivityOneDay = sqlContext.loadFromMongoDB(ReadConfig(Map("uri" -> "mongodb://zmy3:zmy3@172.23.5.158/mpush.activity?readPreference=primary", "partitioner" -> "MongoSplitVectorPartitioner"))).where("ct> 1499616000000 and ct<1499702400000")//查询某一天的activity总量
+    val dfDvOneDayWithCt = session.read.format("com.aerospike.spark.sql").option("aerospike.set", "dv").load.where("ct>1500134400 and ct<1500220800").filter("ct is not null");
+    val dfDvOneDayWithMt = session.read.format("com.aerospike.spark.sql").option("aerospike.set", "dv").load.where("mt>1500134400000 and mt<1500220800000").filter("mt is not null");
+
     val appApp = dfApp.join(dfTdAppWithOutId,dfApp("_id")===dfTdAppWithOutId("app"))
-    var appGame = dfApp.join(dfTdGameWithOutId,dfApp("_id")===dfTdGameWithOutId("app"))
+    val appGame = dfApp.join(dfTdGameWithOutId,dfApp("_id")===dfTdGameWithOutId("app"))
     dfApp.createOrReplaceTempView("dfApp")
     dfTd.createOrReplaceTempView("dfTd")
-    var appMpush = sqlContext.sql("select * from dfApp  where _id not in (select app from dfTd)")
-    val count = appApp.join(dfPush,appApp("_id")===dfPush("app")).select(dfPush("_id"),dfPush("ct")).where("ct> 1499616000000 and ct< 1499702400000").count()
+    val appMpush = sqlContext.sql("select * from dfApp  where _id not in (select app from dfTd)")
+
+    val pushCount_App = appApp.join(dfPushOneDay,appApp("_id")===dfPushOneDay("app")).count()//app每日贡献push数 4838
+    val pushCount_Game = appGame.join(dfPushOneDay,appGame("_id")===dfPushOneDay("app")).count()//game每日贡献push数  1
+
+    val activityCount_App = appApp.join(dfActivityOneDay, appApp("_id") === dfActivityOneDay("app")).count()//app每日贡献activity数 1
+    val activityCount_Game = appGame.join(dfActivityOneDay,appGame("_id")===dfActivityOneDay("app")).count() //game每日贡献activity数 1
+
+    val dvCount_App = appApp.join(dfDvOneDayWithCt,appApp("_id.oid")===dfDvOneDayWithCt("app")).count()// 每日贡献的新增设备数   3800
+    val dvCount_Game =appGame.join(dfDvOneDayWithCt,appGame("_id.oid")===dfDvOneDayWithCt("app")).count()// 每日贡献的新增设备数  1200
+
+    val activeDv_App = appApp.join(dfDvOneDayWithMt,appApp("_id.oid")===dfDvOneDayWithMt("app")).count()// 每日贡献的活跃设备数  3800
+    val activeDv_Game =appGame.join(dfDvOneDayWithMt,appGame("_id.oid")===dfDvOneDayWithMt("app")).count()// 每日贡献的活跃设备数  1200
+
     val fileName = "statistics_result_" + getDt + ".txt"
     val writer = new PrintWriter(new File(fileName))
-    writer.write("app每日贡献push数:"+count)
+    writer.write("app每日贡献push数:"+pushCount_App+"\n")
+    writer.write("game每日贡献push数:"+pushCount_Game+"\n")
+
+    writer.write("app每日贡献activity数:"+activityCount_App+"\n")
+    writer.write("game每日贡献activity数:"+activityCount_Game+"\n")
+
+    writer.write("app每日贡献的新增设备数:"+dvCount_App+"\n")
+    writer.write("game每日贡献的新增设备数:"+dvCount_Game+"\n")
+
+    writer.write("app每日贡献的活跃设备数:"+activeDv_App+"\n")
+    writer.write("game每日贡献的活跃设备数:"+activeDv_Game+"\n")
     writer.close()
   }
 }
