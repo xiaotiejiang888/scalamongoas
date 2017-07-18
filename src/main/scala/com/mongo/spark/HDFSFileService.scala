@@ -2,7 +2,7 @@ package com.mongo.spark
 
 import java.io.{FileSystem => _, _}
 import java.text.SimpleDateFormat
-import java.util.{Calendar, Date}
+import java.util.{Calendar, Date, Properties}
 
 import com.mongodb.spark.config._
 import com.mongodb.spark.sql._
@@ -34,31 +34,40 @@ object HDFSFileService {
     val dt = dateFormat.format(now)
     dt
   }
-  def getSparkSession(args: Array[String]): SparkSession = {
-    val uri: String = args.headOption.getOrElse("mongodb://zmy3:zmy3@172.23.5.158/mpush.app?readPreference=primary")
+
+  def getSparkSession(mongoUrl: String, sparkUrl:String,asSeedhost:String,asHost:String): SparkSession = {
+    val uri: String = "mongodb://" + mongoUrl + "/mpush.app?readPreference=primary"
     val conf = new SparkConf()
-      .setMaster("spark://172.23.5.113:7077")
+      .setMaster("spark://" + sparkUrl)
       .setAppName("MongoSparkConnectorTour")
       .set("spark.app.id", "MongoSparkConnectorTour")
       .set("spark.mongodb.input.uri", uri)
       .set("spark.mongodb.output.uri", uri)
-      .set("aerospike.seedhost", "172.23.5.158")
-      .set("aerospike.port",  "3000")
+      .set("aerospike.seedhost", asSeedhost)
+      .set("aerospike.port",  asHost)
       .set("aerospike.namespace", "push")
-    val spark = SparkSession.builder().config(conf).master("spark://172.23.5.113:7077").appName("scalamongoas").getOrCreate()
+    val spark = SparkSession.builder().config(conf).master("spark://" + sparkUrl).appName("scalamongoas").getOrCreate()
     spark
   }
 
   //./spark-submit --class com.mongo.spark.HDFSFileService --master spark://172.23.5.113:7077 scalamongoas-assembly-1.3.1.jar
   def main(args: Array[String]): Unit = {
-    val session = getSparkSession(args)
+    val filePath =System.getProperty("user.dir")
+    println("filePath:"+filePath)
+    val postgprop = new Properties
+    val ipstream = new BufferedInputStream(new FileInputStream(filePath+"/conf/config.properties"))
+    postgprop.load(ipstream)
+    val mongoUrl = postgprop.getProperty("mongo.userName")+":"+postgprop.getProperty("mongo.password")+"@"+postgprop.getProperty("mongo.host")
+    val sparkUrl = postgprop.getProperty("spark.host") + ":" + postgprop.getProperty("spark.port")
+
+    val session = getSparkSession(mongoUrl,sparkUrl,postgprop.getProperty("aerospike.seedhost"),postgprop.getProperty("aerospike.port"))
     val sqlContext = session.sqlContext
-    val dfApp = sqlContext.loadFromMongoDB(ReadConfig(Map("uri" -> "mongodb://zmy3:zmy3@172.23.5.158/mpush.app?readPreference=primary", "partitioner" -> "MongoSplitVectorPartitioner")))
-    val dfTd = sqlContext.loadFromMongoDB(ReadConfig(Map("uri" -> "mongodb://zmy3:zmy3@172.23.5.158/mpush.td?readPreference=primary", "partitioner" -> "MongoSplitVectorPartitioner")))
-    val dfTdAppWithOutId = sqlContext.loadFromMongoDB(ReadConfig(Map("uri" -> "mongodb://zmy3:zmy3@172.23.5.158/mpush.td?readPreference=primary", "partitioner" -> "MongoSplitVectorPartitioner"))).where("source='app'").drop("_id")
-    val dfTdGameWithOutId = sqlContext.loadFromMongoDB(ReadConfig(Map("uri" -> "mongodb://zmy3:zmy3@172.23.5.158/mpush.td?readPreference=primary", "partitioner" -> "MongoSplitVectorPartitioner"))).where("source='game'").drop("_id")
-    val dfPushOneDay = sqlContext.loadFromMongoDB(ReadConfig(Map("uri" -> "mongodb://zmy3:zmy3@172.23.5.158/mpush.push?readPreference=primary", "partitioner" -> "MongoSplitVectorPartitioner"))).where("ct>1499616000000 and ct<1499702400000")//查询某一天的push总量
-    val dfActivityOneDay = sqlContext.loadFromMongoDB(ReadConfig(Map("uri" -> "mongodb://zmy3:zmy3@172.23.5.158/mpush.activity?readPreference=primary", "partitioner" -> "MongoSplitVectorPartitioner"))).where("ct> 1499616000000 and ct<1499702400000")//查询某一天的activity总量
+    val dfApp = sqlContext.loadFromMongoDB(ReadConfig(Map("uri" -> ("mongodb://" + mongoUrl + "/mpush.app?readPreference=primary"), "partitioner" -> "MongoSplitVectorPartitioner")))
+    val dfTd = sqlContext.loadFromMongoDB(ReadConfig(Map("uri" -> ("mongodb://" + mongoUrl + "/mpush.td?readPreference=primary"), "partitioner" -> "MongoSplitVectorPartitioner")))
+    val dfTdAppWithOutId = sqlContext.loadFromMongoDB(ReadConfig(Map("uri" -> ("mongodb://" + mongoUrl + "/mpush.td?readPreference=primary"), "partitioner" -> "MongoSplitVectorPartitioner"))).where("source='app'").drop("_id")
+    val dfTdGameWithOutId = sqlContext.loadFromMongoDB(ReadConfig(Map("uri" -> ("mongodb://" + mongoUrl + "/mpush.td?readPreference=primary"), "partitioner" -> "MongoSplitVectorPartitioner"))).where("source='game'").drop("_id")
+    val dfPushOneDay = sqlContext.loadFromMongoDB(ReadConfig(Map("uri" -> ("mongodb://" + mongoUrl + "/mpush.push?readPreference=primary"), "partitioner" -> "MongoSplitVectorPartitioner"))).where("ct>1499616000000 and ct<1499702400000")//查询某一天的push总量
+    val dfActivityOneDay = sqlContext.loadFromMongoDB(ReadConfig(Map("uri" -> ("mongodb://" + mongoUrl + "/mpush.activity?readPreference=primary"), "partitioner" -> "MongoSplitVectorPartitioner"))).where("ct> 1499616000000 and ct<1499702400000")//查询某一天的activity总量
     val dfDvOneDayWithCt = session.read.format("com.aerospike.spark.sql").option("aerospike.set", "dv").load.filter("ct is not null and (tp='a' or (tp = 'i' and length(token) > 0)) and ct>1500307200 and ct<1500393600");
     dfDvOneDayWithCt.cache
     val dfDvOneDayWithMt = session.read.format("com.aerospike.spark.sql").option("aerospike.set", "dv").load.filter("mt is not null and mt>1500134400000 and mt<1500220800000");
