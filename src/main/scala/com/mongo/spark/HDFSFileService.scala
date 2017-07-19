@@ -10,15 +10,15 @@ import org.apache.spark.SparkConf
 import org.apache.spark.sql.SparkSession
 
 object HDFSFileService {
-  def getOneDayStart_time():Long={
-    val now = new Date()
+  def getOneDayStart_time(date:Date):Long={
     val dateFormat = new SimpleDateFormat("yyyy-MM-dd")
-    val a = dateFormat.parse(dateFormat.format(now)).getTime
+    val a = dateFormat.parse(dateFormat.format(date)).getTime
     val str = a+""
     str.toLong
   }
-  def getOneDayEnd_time():Long={
+  def getOneDayEnd_time(date:Date):Long={
     var cal = Calendar.getInstance();
+    cal.setTime(date);
     cal.set(Calendar.HOUR_OF_DAY, 23);
     cal.set(Calendar.MINUTE, 59);
     cal.set(Calendar.SECOND, 59);
@@ -60,17 +60,20 @@ object HDFSFileService {
     val mongoUrl = postgprop.getProperty("mongo.userName")+":"+postgprop.getProperty("mongo.password")+"@"+postgprop.getProperty("mongo.host")
     val sparkUrl = postgprop.getProperty("spark.host") + ":" + postgprop.getProperty("spark.port")
 
+    val oneDayStart_time = getOneDayStart_time(new Date())
+    val oneDayEnd_time = getOneDayEnd_time(new Date())
+
     val session = getSparkSession(mongoUrl,sparkUrl,postgprop.getProperty("aerospike.seedhost"),postgprop.getProperty("aerospike.port"))
     val sqlContext = session.sqlContext
     val dfApp = sqlContext.loadFromMongoDB(ReadConfig(Map("uri" -> ("mongodb://" + mongoUrl + "/mpush.app?readPreference=primary"), "partitioner" -> "MongoSplitVectorPartitioner")))
     val dfTd = sqlContext.loadFromMongoDB(ReadConfig(Map("uri" -> ("mongodb://" + mongoUrl + "/mpush.td?readPreference=primary"), "partitioner" -> "MongoSplitVectorPartitioner")))
     val dfTdAppWithOutId = sqlContext.loadFromMongoDB(ReadConfig(Map("uri" -> ("mongodb://" + mongoUrl + "/mpush.td?readPreference=primary"), "partitioner" -> "MongoSplitVectorPartitioner"))).where("source='app'").drop("_id")
     val dfTdGameWithOutId = sqlContext.loadFromMongoDB(ReadConfig(Map("uri" -> ("mongodb://" + mongoUrl + "/mpush.td?readPreference=primary"), "partitioner" -> "MongoSplitVectorPartitioner"))).where("source='game'").drop("_id")
-    val dfPushOneDay = sqlContext.loadFromMongoDB(ReadConfig(Map("uri" -> ("mongodb://" + mongoUrl + "/mpush.push?readPreference=primary"), "partitioner" -> "MongoSplitVectorPartitioner"))).where("ct>1499616000000 and ct<1499702400000")//查询某一天的push总量
-    val dfActivityOneDay = sqlContext.loadFromMongoDB(ReadConfig(Map("uri" -> ("mongodb://" + mongoUrl + "/mpush.activity?readPreference=primary"), "partitioner" -> "MongoSplitVectorPartitioner"))).where("ct> 1499616000000 and ct<1499702400000")//查询某一天的activity总量
-    val dfDvOneDayWithCt = session.read.format("com.aerospike.spark.sql").option("aerospike.set", "dv").load.filter("ct is not null and (tp='a' or (tp = 'i' and length(token) > 0)) and ct>1500307200 and ct<1500393600");
+    val dfPushOneDay = sqlContext.loadFromMongoDB(ReadConfig(Map("uri" -> ("mongodb://" + mongoUrl + "/mpush.push?readPreference=primary"), "partitioner" -> "MongoSplitVectorPartitioner"))).where("ct>"+oneDayStart_time+" and ct<"+oneDayEnd_time)//查询某一天的push总量
+    val dfActivityOneDay = sqlContext.loadFromMongoDB(ReadConfig(Map("uri" -> ("mongodb://" + mongoUrl + "/mpush.activity?readPreference=primary"), "partitioner" -> "MongoSplitVectorPartitioner"))).where("ct>"+oneDayStart_time+" and ct<"+oneDayEnd_time)//查询某一天的activity总量
+    val dfDvOneDayWithCt = session.read.format("com.aerospike.spark.sql").option("aerospike.set", "dv").load.filter("ct is not null and (tp='a' or (tp = 'i' and length(token) > 0)) and "+"ct>"+oneDayStart_time+" and ct<"+oneDayEnd_time);
     dfDvOneDayWithCt.cache
-    val dfDvOneDayWithMt = session.read.format("com.aerospike.spark.sql").option("aerospike.set", "dv").load.filter("mt is not null and mt>1500134400000 and mt<1500220800000");
+    val dfDvOneDayWithMt = session.read.format("com.aerospike.spark.sql").option("aerospike.set", "dv").load.filter("mt is not null and "+"mt>"+oneDayStart_time+" and mt<"+oneDayEnd_time);
 
     val appApp = dfApp.join(dfTdAppWithOutId,dfApp("_id")===dfTdAppWithOutId("app"))
     val appGame = dfApp.join(dfTdGameWithOutId,dfApp("_id")===dfTdGameWithOutId("app"))
@@ -94,9 +97,9 @@ object HDFSFileService {
     val activeDv_Game =appGame.join(dfDvOneDayWithMt,appGame("_id.oid")===dfDvOneDayWithMt("app")).count()// 每日贡献的活跃设备数  1200
     val activeDv_Mpush =appMpush.join(dfDvOneDayWithMt,appMpush("_id.oid")===dfDvOneDayWithMt("app")).count()
 
-    val appAddCount = appApp.where("ct>1499616000000 and ct<1499702400000").count()  //app每日新增数  96
-    val gameAddCount = appGame.where("ct>1499616000000 and ct<1499702400000").count() //game每日新增数     37
-    val mpushAddCount = appMpush.where("ct>1499616000000 and ct<1499702400000").count()  // 0
+    val appAddCount = appApp.where("ct>"+oneDayStart_time+" and ct<"+oneDayEnd_time).count()  //app每日新增数  96
+    val gameAddCount = appGame.where("ct>"+oneDayStart_time+" and ct<"+oneDayEnd_time).count() //game每日新增数     37
+    val mpushAddCount = appMpush.where("ct>"+oneDayStart_time+" and ct<"+oneDayEnd_time).count()  // 0
 
     val appTotalCount = appApp.count()  //app累计数
     val gameTotalCount = appGame.count() //game累计数
