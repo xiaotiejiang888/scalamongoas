@@ -2,14 +2,14 @@ import java.text.SimpleDateFormat
 import java.util.{Calendar, Date}
 
 object TestService {
-  def getDaysBefore(dt: Date, interval: Int):String = {
+  def getDaysBefore(dt: Date, interval: Int):Date = {
     val dateFormat: SimpleDateFormat = new SimpleDateFormat("yyyy-MM-dd")
 
     val cal: Calendar = Calendar.getInstance()
     cal.setTime(dt);
 
     cal.add(Calendar.DATE, - interval)
-    val day = dateFormat.format(cal.getTime())
+    val day = cal.getTime()
     day
   }
   def getOneDayEnd_time(date:Date):Long={
